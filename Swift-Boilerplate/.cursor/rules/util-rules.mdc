@@ -1,0 +1,1333 @@
+---
+description: Comprehensive documentation for four core utility services (API, Notifications, Superwall, User Management) that provide secure HTTP client functionality, automated user engagement campaigns, strategic paywall monetization, and flexible user state management with multiple storage backends. Establishes singleton patterns, async/await implementations, and extensive error handling with novice-friendly documentation and real-world integration examples for building production-ready iOS apps.
+globs: 
+alwaysApply: false
+---
+# Swift Boilerplate Utilities
+
+This document outlines all the utility components available in the Swift Boilerplate project. All utility files are located in the `Utils/` directory.
+
+## 🌐 API Service (`Utils/apiService.swift`)
+
+A comprehensive, secure HTTP client for making API calls with modern Swift async/await patterns.
+
+### Key Features
+- ✅ **HTTPS-only security** - Automatically rejects non-secure URLs
+- ✅ **Bearer token & API key authentication** - Multiple auth methods supported
+- ✅ **Modern async/await** - Clean, readable code patterns
+- ✅ **Type-safe JSON handling** - Automatic encoding/decoding with Codable
+- ✅ **Comprehensive error handling** - Specific error types for different scenarios
+- ✅ **Request/response logging** - Debug mode for development
+- ✅ **Configurable timeouts** - Customizable request timeouts
+- ✅ **Custom headers support** - Flexible header management
+
+### Configuration (One-time setup)
+```swift
+// In your app startup (AppDelegate, SceneDelegate, or App.swift)
+APIService.shared.configure(baseURL: "https://api.yourapp.com")
+APIService.shared.setTimeout(30) // 30 seconds timeout
+APIService.shared.enableLogging(true) // Enable for debugging
+```
+
+### Authentication Setup
+```swift
+// Bearer token (JWT, OAuth)
+APIService.shared.setBearerToken("your-jwt-token-here")
+
+// API key authentication
+APIService.shared.setAPIKey("your-api-key-here")
+
+// Common headers for all requests
+APIService.shared.setCommonHeaders([
+    "X-App-Version": "1.0.0",
+    "X-Platform": "iOS"
+])
+```
+
+### Available HTTP Methods
+
+#### GET Requests
+```swift
+// Simple GET
+let users: [User] = try await APIService.shared.get("/users")
+
+// GET with custom headers
+let data: ApiResponse = try await APIService.shared.get("/protected", 
+                                                      headers: ["X-Custom": "value"])
+```
+
+#### POST Requests
+```swift
+// POST with body
+let newUser: User = try await APIService.shared.post("/users", body: createUserData)
+
+// POST without expecting a response body
+let _: EmptyResponse = try await APIService.shared.post("/analytics", body: eventData)
+```
+
+#### PUT Requests
+```swift
+// Update resource
+let updatedUser: User = try await APIService.shared.put("/users/123", body: updateData)
+```
+
+#### DELETE Requests
+```swift
+// Delete resource
+let _: EmptyResponse = try await APIService.shared.delete("/users/123")
+```
+
+#### PATCH Requests
+```swift
+// Partial update
+let patchedUser: User = try await APIService.shared.patch("/users/123", body: patchData)
+```
+
+### Error Handling
+The API service provides comprehensive error handling with specific error types:
+
+```swift
+do {
+    let users: [User] = try await APIService.shared.get("/users")
+    // Handle success
+} catch APIError.unauthorized {
+    // Handle 401 - redirect to login
+} catch APIError.forbidden {
+    // Handle 403 - show permission error
+} catch APIError.notFound {
+    // Handle 404 - resource not found
+} catch APIError.networkError(let error) {
+    // Handle network issues
+} catch APIError.decodingError(let error) {
+    // Handle JSON parsing errors
+} catch {
+    // Handle other errors
+}
+```
+
+### Error Types Available
+- `APIError.invalidURL` - Invalid or malformed URL
+- `APIError.unauthorized` - 401 authentication required
+- `APIError.forbidden` - 403 insufficient permissions
+- `APIError.notFound` - 404 resource not found
+- `APIError.serverError(Int)` - 5xx server errors with status code
+- `APIError.networkError(Error)` - Network connectivity issues
+- `APIError.decodingError(Error)` - JSON parsing failures
+- `APIError.encodingError(Error)` - JSON encoding failures
+
+### Service Layer Pattern
+Recommended usage pattern for organizing API calls:
+
+```swift
+// Create service classes for different API domains
+class UserService {
+    func getUsers() async throws -> [User] {
+        return try await APIService.shared.get("/users")
+    }
+    
+    func createUser(_ userData: CreateUserRequest) async throws -> User {
+        return try await APIService.shared.post("/users", body: userData)
+    }
+    
+    func updateUser(id: Int, data: UpdateUserRequest) async throws -> User {
+        return try await APIService.shared.put("/users/\(id)", body: data)
+    }
+    
+    func deleteUser(id: Int) async throws {
+        let _: EmptyResponse = try await APIService.shared.delete("/users/\(id)")
+    }
+}
+
+// Usage in SwiftUI Views or ViewModels
+class UserViewModel: ObservableObject {
+    private let userService = UserService()
+    @Published var users: [User] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    func loadUsers() async {
+        isLoading = true
+        do {
+            users = try await userService.getUsers()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+}
+```
+
+### Security Best Practices
+- ✅ All requests are HTTPS-only (HTTP requests are automatically rejected)
+- ✅ No caching of sensitive data (URLSession configured with no cache)
+- ✅ Proper authentication header handling
+- ✅ Request/response logging only in debug mode
+- ✅ Timeout protection against hanging requests
+
+### Debug Features
+```swift
+// Enable detailed logging for debugging
+APIService.shared.enableLogging(true)
+
+// This will log:
+// 🌐 API Request: URL, Method, Headers, Body
+// 📡 API Response: Status, Headers, Body
+```
+
+### Common Patterns
+
+#### Loading States in SwiftUI
+```swift
+struct UserListView: View {
+    @StateObject private var viewModel = UserViewModel()
+    
+    var body: some View {
+        NavigationView {
+            Group {
+                if viewModel.isLoading {
+                    ProgressView("Loading users...")
+                } else if let error = viewModel.errorMessage {
+                    Text("Error: \(error)")
+                        .foregroundColor(.error)
+                } else {
+                    List(viewModel.users) { user in
+                        Text(user.name)
+                    }
+                }
+            }
+            .navigationTitle("Users")
+            .task {
+                await viewModel.loadUsers()
+            }
+        }
+    }
+}
+```
+
+#### Error Handling in ViewModels
+```swift
+extension UserViewModel {
+    func handleAPIError(_ error: Error) {
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .unauthorized:
+                // Redirect to login
+                AuthManager.shared.logout()
+            case .networkError:
+                errorMessage = "Please check your internet connection"
+            default:
+                errorMessage = apiError.localizedDescription
+            }
+        } else {
+            errorMessage = "An unexpected error occurred"
+        }
+    }
+}
+```
+
+---
+
+## 🔔 Notification Manager (`Utils/notificationManager.swift`)
+
+A comprehensive notification system for user engagement with permission management, immediate notifications, and automated engagement campaigns.
+
+### Key Features
+- ✅ **Permission request handling** - Modern async/await permission requests
+- ✅ **Immediate notifications** - Send notifications instantly
+- ✅ **Engagement campaigns** - Pre-built notification sequences for user retention
+- ✅ **Scheduled notifications** - Send notifications at specific times
+- ✅ **Badge management** - Control app icon badge count
+- ✅ **Rich notifications** - Interactive actions and custom sounds
+- ✅ **Campaign analytics** - Track notification performance
+- ✅ **Foreground handling** - Show notifications even when app is open
+
+### Permission Setup (One-time)
+```swift
+// Request notification permissions (typically during onboarding)
+do {
+    let granted = try await NotificationManager.shared.requestPermissions()
+    if granted {
+        // Start engagement campaigns or send welcome notification
+        NotificationManager.shared.startEngagementCampaign()
+    }
+} catch NotificationError.permissionDenied {
+    // Handle permission denied - guide user to settings
+}
+
+// Check permission status
+let enabled = await NotificationManager.shared.areNotificationsEnabled()
+```
+
+### Immediate Notifications
+```swift
+// Simple notification
+NotificationManager.shared.sendNotification(
+    title: "Welcome!",
+    body: "Thanks for joining our app"
+)
+
+// Rich notification with badge and custom data
+NotificationManager.shared.sendNotification(
+    title: "Order Confirmed!",
+    body: "Your order will arrive in 2-3 days",
+    sound: .default,
+    badge: 5,
+    userInfo: ["orderId": "123", "category": "order"]
+)
+```
+
+### Scheduled Notifications
+```swift
+// Schedule notification for later
+let notificationId = try await NotificationManager.shared.scheduleNotification(
+    title: "Daily Reminder",
+    body: "Don't forget to complete your tasks!",
+    delay: 3600 // 1 hour from now
+)
+
+// Cancel scheduled notification
+NotificationManager.shared.cancelNotification(identifier: notificationId)
+```
+
+### Engagement Campaigns
+Pre-built notification sequences designed to boost user engagement and retention:
+
+#### Default Campaign Schedule
+1. **Welcome** (30 minutes) - "Welcome aboard! 🎉"
+2. **First Engagement** (1 day) - "Don't miss out! 📱"
+3. **Re-engagement** (3 days) - "We miss you! 💙"
+4. **Feature Discovery** (1 week) - "Special features await! ⭐"
+5. **Progress Motivation** (2 weeks) - "You're making progress! 🚀"
+6. **Monthly Check-in** (30 days) - "Monthly check-in 📊"
+
+#### Campaign Management
+```swift
+// Start the entire engagement sequence (one line!)
+NotificationManager.shared.startEngagementCampaign()
+
+// Check if campaign is running
+let isRunning = NotificationManager.shared.isCampaignRunning()
+
+// Stop campaign
+NotificationManager.shared.stopEngagementCampaign()
+
+// Enable/disable campaigns
+NotificationManager.shared.setCampaignsEnabled(false)
+```
+
+### Badge Management
+```swift
+// Set badge count
+NotificationManager.shared.setBadgeCount(3)
+
+// Increment badge
+NotificationManager.shared.incrementBadge(by: 1)
+
+// Clear badge
+NotificationManager.shared.clearBadge()
+```
+
+### Analytics & Management
+```swift
+// Get notification statistics
+let stats = await NotificationManager.shared.getNotificationStats()
+print("Total pending: \(stats["totalPending"])")
+print("Campaign running: \(stats["campaignRunning"])")
+print("Badge count: \(stats["badgeCount"])")
+
+// Get all pending notifications
+let pending = await NotificationManager.shared.getPendingNotifications()
+
+// Cancel all notifications
+NotificationManager.shared.cancelAllNotifications()
+```
+
+### Error Handling
+```swift
+do {
+    try await NotificationManager.shared.scheduleNotification(...)
+} catch NotificationError.permissionDenied {
+    // Guide user to settings to enable notifications
+} catch NotificationError.notificationNotAllowed {
+    // Notifications are disabled
+} catch NotificationError.invalidDelay {
+    // Fix timing issue
+} catch NotificationError.schedulingFailed {
+    // Retry or handle failure
+} catch {
+    // Handle other errors
+}
+```
+
+### Error Types Available
+- `NotificationError.permissionDenied` - User denied notification permission
+- `NotificationError.notificationNotAllowed` - Notifications are disabled
+- `NotificationError.schedulingFailed` - Failed to schedule notification
+- `NotificationError.invalidDelay` - Invalid delay time provided
+- `NotificationError.campaignAlreadyRunning` - Campaign is already active
+
+### Interactive Notifications
+The system includes built-in interactive actions:
+- **"Open App"** - Brings user to foreground
+- **"Dismiss"** - Dismisses notification
+- Custom actions can be easily added
+
+### Integration Examples
+
+#### App Startup (AppDelegate/SceneDelegate)
+```swift
+// Request permissions during app launch
+Task {
+    do {
+        let granted = try await NotificationManager.shared.requestPermissions()
+        if granted {
+            NotificationManager.shared.startEngagementCampaign()
+        }
+    } catch {
+        print("Notification permission denied")
+    }
+}
+```
+
+#### SwiftUI Onboarding
+```swift
+struct OnboardingView: View {
+    @State private var permissionGranted = false
+    
+    var body: some View {
+        VStack {
+            Text("Stay Connected")
+                .font(.titleLarge)
+            
+            Text("Get notified about important updates")
+                .font(.bodyMedium)
+            
+            Button("Enable Notifications") {
+                Task {
+                    do {
+                        permissionGranted = try await NotificationManager.shared.requestPermissions()
+                        if permissionGranted {
+                            NotificationManager.shared.startEngagementCampaign()
+                        }
+                    } catch {
+                        // Handle error
+                    }
+                }
+            }
+            .buttonStyle(.primary)
+        }
+    }
+}
+```
+
+#### ViewModel Integration
+```swift
+class MainViewModel: ObservableObject {
+    @Published var notificationCount = 0
+    
+    func handleAppLaunch() {
+        Task {
+            // Check notification status
+            let enabled = await NotificationManager.shared.areNotificationsEnabled()
+            
+            if enabled && !NotificationManager.shared.isCampaignRunning() {
+                NotificationManager.shared.startEngagementCampaign()
+            }
+            
+            // Update badge count
+            await updateNotificationCount()
+        }
+    }
+    
+    private func updateNotificationCount() async {
+        let stats = await NotificationManager.shared.getNotificationStats()
+        await MainActor.run {
+            notificationCount = stats["totalPending"] as? Int ?? 0
+        }
+    }
+}
+```
+
+### Best Practices
+- ✅ Request permissions during onboarding, not immediately at app launch
+- ✅ Start engagement campaigns only after permission is granted
+- ✅ Use meaningful notification content that provides value
+- ✅ Monitor campaign performance and adjust timing as needed
+- ✅ Clear badges when user views relevant content
+- ✅ Handle notification taps to navigate to relevant content
+- ✅ Test notifications on device (not simulator)
+
+---
+
+## 💰 Superwall Service (`Utils/superwallService.swift`)
+
+A comprehensive paywall and monetization system that integrates with Superwall to boost app revenue through strategic paywall placement and user targeting.
+
+### Key Features
+- ✅ **Easy paywall presentation** - Simple placement registration triggers paywalls
+- ✅ **User targeting & segmentation** - Attribute-based audience filtering
+- ✅ **A/B testing support** - Campaign and audience management
+- ✅ **Analytics integration** - Forwards events to existing analytics service
+- ✅ **Subscription management** - Track subscription status and lifecycle
+- ✅ **Purchase handling** - Automatic purchase and restoration management
+- ✅ **Modern async/await** - Clean, readable code patterns
+- ✅ **Debug mode** - Detailed logging for development
+
+### Configuration (One-time setup)
+```swift
+// Configure Superwall during app startup
+SuperwallService.shared.configure(
+    apiKey: "pk_your_superwall_api_key_here",
+    debugMode: true // Enable for development
+)
+
+// Set initial user attributes for targeting
+SuperwallService.shared.setUserAttributes([
+    "user_id": currentUser.id,
+    "subscription_status": "free",
+    "signup_date": "2024-01-01",
+    "app_version": "1.0.0"
+])
+```
+
+### Placement Registration (Core Feature)
+Placements are events that trigger paywalls when registered. Based on your campaigns in the Superwall dashboard, these may or may not show a paywall depending on your audience rules.
+
+```swift
+// Simple placement registration
+SuperwallService.shared.register("feature_gate")
+SuperwallService.shared.register("premium_content", params: ["content_id": "123"])
+
+// With completion handler
+SuperwallService.shared.register("export_feature") { result in
+    switch result {
+    case .paywallPresented:
+        print("Paywall was shown")
+    case .paywallNotPresented:
+        print("No paywall shown - user may proceed")
+    case .userAlreadySubscribed:
+        print("User is already subscribed")
+    case .placementNotFound:
+        print("Placement not configured in dashboard")
+    case .error(let error):
+        print("Error: \(error.localizedDescription)")
+    }
+}
+
+// Async/await pattern
+let result = await SuperwallService.shared.register("premium_upgrade")
+```
+
+### Pre-defined Placement Names
+Common placement names are provided for consistency:
+
+```swift
+// Use pre-defined placement names
+SuperwallService.Placements.featureGate         // "feature_gate"
+SuperwallService.Placements.premiumContent      // "premium_content"
+SuperwallService.Placements.settingsUpgrade     // "settings_upgrade"
+SuperwallService.Placements.onboardingUpsell    // "onboarding_upsell"
+SuperwallService.Placements.exportFeature       // "export_feature"
+SuperwallService.Placements.customThemes        // "custom_themes"
+SuperwallService.Placements.unlimitedUsage      // "unlimited_usage"
+SuperwallService.Placements.premiumSupport      // "premium_support"
+
+// Convenience methods for common scenarios
+SuperwallService.shared.registerFeatureGate(feature: "export")
+SuperwallService.shared.registerPremiumContent(contentId: "123", contentType: "video")
+SuperwallService.shared.registerOnboardingUpsell(step: "welcome")
+```
+
+### Manual Paywall Presentation
+```swift
+// Present specific paywall manually
+let presented = await SuperwallService.shared.presentPaywall(for: "premium_upgrade")
+
+// With completion handler
+SuperwallService.shared.presentPaywall(for: "settings_upsell") { success in
+    if success {
+        print("Paywall presented successfully")
+    }
+}
+```
+
+### User Attribute Management
+User attributes are used for audience targeting and personalization in Superwall campaigns:
+
+```swift
+// Set multiple attributes
+SuperwallService.shared.setUserAttributes([
+    "user_id": "12345",
+    "plan": "free",
+    "signup_date": "2024-01-01",
+    "lifetime_value": 150.00,
+    "feature_usage_count": 25
+])
+
+// Set single attribute
+SuperwallService.shared.setUserAttribute("premium", forKey: "plan")
+
+// Get current attributes
+let attributes = SuperwallService.shared.getUserAttributes()
+```
+
+### Subscription Status Management
+```swift
+// Set subscription status (affects paywall targeting)
+SuperwallService.shared.setSubscriptionStatus(.premium)
+SuperwallService.shared.setSubscriptionStatus(.trial)
+SuperwallService.shared.setSubscriptionStatus(.free)
+
+// Check subscription status
+let isSubscribed = SuperwallService.shared.isUserSubscribed()
+let status = SuperwallService.shared.getSubscriptionStatus()
+
+// Handle subscription lifecycle
+SuperwallService.shared.handleSuccessfulPurchase(
+    productIdentifier: "premium_monthly",
+    price: 9.99,
+    currency: "USD"
+)
+
+SuperwallService.shared.handlePurchaseRestoration()
+SuperwallService.shared.handleSubscriptionCancellation()
+```
+
+### Available Subscription Statuses
+- `SubscriptionStatus.free` - Free user
+- `SubscriptionStatus.trial` - Active trial user
+- `SubscriptionStatus.premium` - Active premium subscriber
+- `SubscriptionStatus.expired` - Expired subscription
+- `SubscriptionStatus.cancelled` - Cancelled subscription
+
+### Custom Event Tracking
+```swift
+// Track custom events for analytics and targeting
+SuperwallService.shared.trackEvent("feature_used", params: [
+    "feature": "export",
+    "format": "PDF",
+    "file_size": "2MB"
+])
+
+SuperwallService.shared.trackEvent("onboarding_completed", params: [
+    "completion_time": 120,
+    "steps_completed": 5
+])
+```
+
+### Analytics Integration
+The service automatically integrates with your existing analytics system:
+
+```swift
+// Enable/disable analytics forwarding
+SuperwallService.shared.setAnalyticsTrackingEnabled(true)
+
+// All Superwall events are automatically tracked:
+// - placement_registered
+// - paywall_opened
+// - paywall_closed
+// - purchase_completed
+// - user_attributes_updated
+```
+
+### Error Handling
+```swift
+do {
+    let result = await SuperwallService.shared.register("premium_feature")
+    // Handle result
+} catch SuperwallError.notConfigured {
+    // Service not configured - call configure() first
+} catch SuperwallError.invalidPlacement {
+    // Invalid placement name
+} catch SuperwallError.userNotEligible {
+    // User doesn't match audience criteria
+} catch {
+    // Handle other errors
+}
+```
+
+### Error Types Available
+- `SuperwallError.notConfigured` - Service not configured with API key
+- `SuperwallError.invalidAPIKey` - Invalid Superwall API key
+- `SuperwallError.presentationFailed` - Failed to present paywall
+- `SuperwallError.invalidPlacement` - Invalid placement name
+- `SuperwallError.userNotEligible` - User not eligible for paywall
+- `SuperwallError.networkError(Error)` - Network connectivity issues
+
+### Integration Examples
+
+#### Feature Gate Implementation
+```swift
+struct ExportView: View {
+    @State private var showingPaywall = false
+    
+    var body: some View {
+        Button("Export Data") {
+            Task {
+                let result = await SuperwallService.shared.register("export_feature")
+                
+                switch result {
+                case .paywallPresented:
+                    // Paywall shown - wait for user decision
+                    break
+                case .paywallNotPresented:
+                    // User can proceed - no paywall needed
+                    performExport()
+                case .userAlreadySubscribed:
+                    // User is subscribed - allow export
+                    performExport()
+                case .placementNotFound:
+                    // Placement not configured - allow for now
+                    performExport()
+                case .error(let error):
+                    print("Error: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func performExport() {
+        // Perform the export functionality
+    }
+}
+```
+
+#### Settings Upgrade Button
+```swift
+struct SettingsView: View {
+    var body: some View {
+        Section("Subscription") {
+            if !SuperwallService.shared.isUserSubscribed() {
+                Button("Upgrade to Premium") {
+                    Task {
+                        let _ = await SuperwallService.shared.presentPaywall(for: "settings_upgrade")
+                    }
+                }
+                .buttonStyle(.primary)
+            } else {
+                HStack {
+                    Text("Premium Member")
+                        .foregroundColor(.success)
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.success)
+                }
+            }
+        }
+    }
+}
+```
+
+#### Onboarding Upsell
+```swift
+struct OnboardingStep: View {
+    let step: String
+    
+    var body: some View {
+        VStack {
+            // ... onboarding content
+            
+            Button("Continue") {
+                // Register upsell placement for this step
+                SuperwallService.shared.registerOnboardingUpsell(step: step)
+                
+                // Continue with onboarding
+                navigateToNextStep()
+            }
+        }
+        .onAppear {
+            // Set user attributes for targeting
+            SuperwallService.shared.setUserAttributes([
+                "onboarding_step": step,
+                "onboarding_start_time": Date().timeIntervalSince1970
+            ])
+        }
+    }
+}
+```
+
+#### ViewModel Integration
+```swift
+class MainViewModel: ObservableObject {
+    @Published var isSubscribed = false
+    @Published var subscriptionStatus: SubscriptionStatus = .free
+    
+    init() {
+        updateSubscriptionStatus()
+    }
+    
+    func updateSubscriptionStatus() {
+        isSubscribed = SuperwallService.shared.isUserSubscribed()
+        subscriptionStatus = SuperwallService.shared.getSubscriptionStatus()
+    }
+    
+    func handleFeatureAccess(feature: String) async {
+        let result = await SuperwallService.shared.register("feature_gate", params: [
+            "feature": feature
+        ])
+        
+        switch result {
+        case .userAlreadySubscribed, .paywallNotPresented:
+            // User can access feature
+            await enableFeature(feature)
+        case .paywallPresented:
+            // Wait for user to complete purchase or dismiss
+            break
+        case .error(let error):
+            // Handle error
+            print("Feature access error: \(error)")
+        }
+    }
+    
+    private func enableFeature(_ feature: String) async {
+        // Enable the requested feature
+        await MainActor.run {
+            // Update UI
+        }
+    }
+}
+```
+
+### Automatic Event Handling
+The service includes a Superwall delegate that automatically handles SDK events:
+
+```swift
+// Automatically handled events:
+// - paywall_opened -> tracked to analytics
+// - paywall_closed -> tracked to analytics  
+// - transaction_completed -> updates subscription status
+// - transaction_restored -> updates subscription status
+// - subscription_started -> sets status to .premium
+// - free_trial_started -> sets status to .trial
+```
+
+### Utility Methods
+```swift
+// Reset user data (useful for logout)
+SuperwallService.shared.resetUserData()
+
+// Get analytics summary
+let summary = SuperwallService.shared.getAnalyticsSummary()
+print("Subscription status: \(summary["subscription_status"])")
+print("Is subscribed: \(summary["is_subscribed"])")
+```
+
+### Best Practices
+- ✅ Configure Superwall during app startup with your API key
+- ✅ Set user attributes early for proper targeting
+- ✅ Use placement registration at natural feature gates
+- ✅ Handle all placement result cases appropriately  
+- ✅ Test placements in debug mode before production
+- ✅ Monitor analytics to optimize paywall performance
+- ✅ Use pre-defined placement names for consistency
+- ✅ Update subscription status when purchases occur
+- ✅ Reset user data on logout for privacy
+
+### Campaign Strategy
+1. **Onboarding Upsells** - Show paywalls during key onboarding moments
+2. **Feature Gates** - Gate premium features behind paywalls
+3. **Usage Limits** - Show paywalls when users hit usage limits
+4. **Settings Upgrades** - Provide upgrade paths in settings
+5. **Content Gates** - Gate premium content behind subscriptions
+6. **Export/Sharing** - Monetize advanced export features
+
+This Superwall integration provides a complete monetization foundation with proven strategies for maximizing app revenue while maintaining excellent user experience.
+
+### Documentation Reference
+- Full Superwall documentation: https://superwall.com/docs/llms-full.txt
+
+---
+
+## 👤 User Manager (`Utils/userManager.swift`)
+
+A comprehensive user state management system that provides a flexible API for handling authentication, onboarding, user data, and session management with support for multiple storage backends.
+
+### Key Features
+- ✅ **Authentication state management** - Sign in/out with persistent sessions
+- ✅ **Onboarding completion tracking** - Track user onboarding progress
+- ✅ **Flexible storage backends** - Support for UserDefaults, Firebase, Core Data, or custom storage
+- ✅ **User profile management** - Handle user data, preferences, and custom fields
+- ✅ **Service integration** - Automatic integration with API, Superwall, and Notifications
+- ✅ **Session management** - Handle tokens and authentication persistence
+- ✅ **SwiftUI ObservableObject** - Reactive UI updates with @Published properties
+- ✅ **Modern async/await** - Clean, readable code patterns
+
+### Configuration (One-time setup)
+```swift
+// Configure during app startup
+UserManager.shared.setDebugMode(true) // Enable for development
+UserManager.shared.setAutoSyncEnabled(true) // Auto-sync on app activation
+
+// Optional: Set custom storage backend (defaults to UserDefaults)
+UserManager.shared.setStorageBackend(FirebaseStorage()) // or CoreDataStorage(), etc.
+```
+
+### Authentication Management
+```swift
+// Sign in user
+try await UserManager.shared.signIn(
+    userId: "user123",
+    email: "user@example.com",
+    name: "John Doe",
+    avatarURL: "https://example.com/avatar.jpg"
+)
+
+// Check authentication status
+let isSignedIn = UserManager.shared.isSignedIn
+let currentUser = UserManager.shared.currentUser
+
+// Sign out with automatic cleanup
+await UserManager.shared.signOut()
+
+// Check auth status (loads from storage)
+let isAuthenticated = await UserManager.shared.checkAuthenticationStatus()
+```
+
+### Onboarding Management
+```swift
+// Check onboarding status
+let needsOnboarding = UserManager.shared.needsOnboarding
+let isCompleted = UserManager.shared.isOnboardingCompleted
+
+// Complete onboarding (automatically starts engagement campaigns)
+UserManager.shared.completeOnboarding()
+
+// Reset onboarding (useful for testing)
+UserManager.shared.resetOnboarding()
+
+// Check if user is fully set up
+let isReady = UserManager.shared.isFullySetup // Signed in AND onboarded
+```
+
+### User Data Management
+```swift
+// Update user data (merges with existing data)
+UserManager.shared.updateUserData([
+    "plan": "premium",
+    "usage_count": 150,
+    "preferred_theme": "dark",
+    "last_feature_used": "export"
+])
+
+// Get specific user data
+let plan = UserManager.shared.getUserData(for: "plan") as? String
+let usageCount = UserManager.shared.getUserData(for: "usage_count") as? Int
+
+// Remove specific data
+UserManager.shared.removeUserData(for: "temp_data")
+
+// Update user profile
+try await UserManager.shared.updateProfile(
+    name: "John Smith",
+    email: "john.smith@example.com"
+)
+```
+
+### Session Management
+```swift
+// Set session token (for API authentication)
+UserManager.shared.setSessionToken("jwt-token-here")
+
+// Get current session token
+let token = UserManager.shared.getSessionToken()
+
+// Clear session token
+UserManager.shared.clearSessionToken()
+```
+
+### User Model Structure
+The User model provides comprehensive user information:
+
+```swift
+struct User: Codable, Equatable {
+    let id: String              // Unique user identifier
+    let email: String?          // User's email
+    let name: String?           // User's display name
+    let avatarURL: String?      // Profile picture URL
+    let createdAt: Date         // Account creation date
+    let lastLoginAt: Date       // Last login timestamp
+    var preferences: [String: Any]  // User preferences/settings
+    var customData: [String: Any]   // App-specific custom data
+}
+```
+
+### Storage Backend Flexibility
+The User Manager supports multiple storage backends through a protocol-based design:
+
+#### Default: UserDefaults Storage
+```swift
+// Automatically used by default - no configuration needed
+// Data persists locally using UserDefaults
+```
+
+#### Firebase Storage Backend
+```swift
+class FirebaseStorage: UserStorageBackend {
+    func saveUser(_ user: User) async throws {
+        // Implement Firestore saving
+        let db = Firestore.firestore()
+        try await db.collection("users").document(user.id).setData(from: user)
+    }
+    
+    func loadUser() async throws -> User? {
+        // Implement Firestore loading
+        // Return user from Firestore
+    }
+    
+    // ... implement other required methods
+}
+
+// Use Firebase storage
+UserManager.shared.setStorageBackend(FirebaseStorage())
+```
+
+#### Core Data Storage Backend
+```swift
+class CoreDataStorage: UserStorageBackend {
+    func saveUser(_ user: User) async throws {
+        // Implement Core Data saving
+        let context = persistentContainer.viewContext
+        // Save user to Core Data
+    }
+    
+    // ... implement other required methods
+}
+
+// Use Core Data storage
+UserManager.shared.setStorageBackend(CoreDataStorage())
+```
+
+#### Memory-Only Storage (No Persistence)
+```swift
+class MemoryStorage: UserStorageBackend {
+    private var user: User?
+    private var onboardingCompleted = false
+    private var userData: [String: Any] = [:]
+    
+    // Implement protocol methods keeping data in memory only
+}
+
+// Use memory-only storage
+UserManager.shared.setStorageBackend(MemoryStorage())
+```
+
+### Automatic Service Integration
+The User Manager automatically integrates with other utilities:
+
+```swift
+// When user signs in, automatically:
+// ✅ Updates Superwall user attributes for paywall targeting
+// ✅ Sets API service authentication token
+// ✅ Configures user context for analytics
+
+// When onboarding completes, automatically:
+// ✅ Starts notification engagement campaigns
+// ✅ Updates user attributes across all services
+
+// When user signs out, automatically:
+// ✅ Clears all service authentications
+// ✅ Resets Superwall user data
+// ✅ Stops notification campaigns
+// ✅ Cleans up session data
+```
+
+### SwiftUI Integration
+The User Manager is an ObservableObject with @Published properties:
+
+```swift
+struct ContentView: View {
+    @StateObject private var userManager = UserManager.shared
+    
+    var body: some View {
+        Group {
+            if userManager.needsOnboarding {
+                OnboardingView()
+            } else if !userManager.isSignedIn {
+                AuthenticationView()
+            } else {
+                MainAppView()
+            }
+        }
+        .onChange(of: userManager.isSignedIn) { isSignedIn in
+            // React to sign in/out changes
+        }
+    }
+}
+```
+
+### Convenience Properties
+```swift
+// Quick status checks
+let needsOnboarding = UserManager.shared.needsOnboarding
+let isFullySetup = UserManager.shared.isFullySetup
+let displayName = UserManager.shared.userDisplayName    // "John Doe" or "User"
+let initials = UserManager.shared.userInitials          // "JD" for avatars
+```
+
+### Error Handling
+```swift
+do {
+    try await UserManager.shared.signIn(userId: "123", email: "user@example.com")
+    // Handle successful sign in
+} catch UserManagerError.invalidUserData {
+    // Handle invalid user data
+} catch UserManagerError.storageError(let error) {
+    // Handle storage backend errors
+} catch UserManagerError.authenticationFailed {
+    // Handle authentication failure
+} catch {
+    // Handle other errors
+}
+```
+
+### Error Types Available
+- `UserManagerError.notSignedIn` - User is not signed in
+- `UserManagerError.invalidUserData` - Invalid user data provided
+- `UserManagerError.storageError(Error)` - Storage backend error
+- `UserManagerError.networkError(Error)` - Network connectivity issues
+- `UserManagerError.authenticationFailed` - Authentication failed
+- `UserManagerError.userNotFound` - User not found in storage
+- `UserManagerError.dataCorrupted` - User data is corrupted
+
+### Integration Examples
+
+#### Authentication Flow
+```swift
+struct SignInView: View {
+    @State private var email = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        VStack {
+            TextField("Email", text: $email)
+                .textFieldStyle(.roundedBorder)
+            
+            Button("Sign In") {
+                Task {
+                    isLoading = true
+                    do {
+                        // Your authentication logic here
+                        let userId = try await authenticateUser(email: email)
+                        
+                        // Sign in user with UserManager
+                        try await UserManager.shared.signIn(
+                            userId: userId,
+                            email: email
+                        )
+                        
+                        errorMessage = nil
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
+                    isLoading = false
+                }
+            }
+            .buttonStyle(.primary)
+            .disabled(isLoading)
+            
+            if let error = errorMessage {
+                Text(error)
+                    .foregroundColor(.error)
+            }
+        }
+    }
+}
+```
+
+#### Profile Management
+```swift
+struct ProfileView: View {
+    @StateObject private var userManager = UserManager.shared
+    @State private var name = ""
+    @State private var email = ""
+    
+    var body: some View {
+        Form {
+            Section("Profile") {
+                TextField("Name", text: $name)
+                TextField("Email", text: $email)
+                
+                Button("Update Profile") {
+                    Task {
+                        try? await userManager.updateProfile(
+                            name: name,
+                            email: email
+                        )
+                    }
+                }
+                .buttonStyle(.primary)
+            }
+            
+            Section("Account") {
+                HStack {
+                    Text("Account created")
+                    Spacer()
+                    Text(userManager.currentUser?.createdAt.formatted() ?? "Unknown")
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Button("Sign Out") {
+                    Task {
+                        await userManager.signOut()
+                    }
+                }
+                .buttonStyle(.destructive)
+            }
+        }
+        .onAppear {
+            name = userManager.currentUser?.name ?? ""
+            email = userManager.currentUser?.email ?? ""
+        }
+    }
+}
+```
+
+#### Onboarding Flow
+```swift
+struct OnboardingView: View {
+    @StateObject private var userManager = UserManager.shared
+    @State private var currentStep = 0
+    
+    var body: some View {
+        TabView(selection: $currentStep) {
+            WelcomeStep()
+                .tag(0)
+            
+            FeaturesStep()
+                .tag(1)
+            
+            PermissionsStep()
+                .tag(2)
+                .onAppear {
+                    // Complete onboarding on last step
+                    userManager.completeOnboarding()
+                }
+        }
+        .tabViewStyle(.page)
+        .indexViewStyle(.page(backgroundDisplayMode: .always))
+    }
+}
+```
+
+#### ViewModel Integration
+```swift
+class MainViewModel: ObservableObject {
+    @Published var userStats: [String: Any] = [:]
+    
+    private let userManager = UserManager.shared
+    
+    init() {
+        loadUserStats()
+    }
+    
+    func loadUserStats() {
+        userStats = userManager.getAnalyticsSummary()
+        
+        // Update app-specific user data
+        userManager.updateUserData([
+            "last_app_open": Date().timeIntervalSince1970,
+            "session_count": (userManager.getUserData(for: "session_count") as? Int ?? 0) + 1
+        ])
+    }
+    
+    func handleAppStateChange() {
+        if userManager.isSignedIn {
+            Task {
+                try? await userManager.syncUserData()
+            }
+        }
+    }
+}
+```
+
+### Utility Methods
+```swift
+// Force sync with storage backend
+try await UserManager.shared.syncUserData()
+
+// Get comprehensive analytics summary
+let analytics = UserManager.shared.getAnalyticsSummary()
+// Returns: is_signed_in, user_id, onboarding_completed, account_age_days, etc.
+
+// Reset all user data (logout + cleanup)
+await UserManager.shared.resetAllUserData()
+```
+
+### Best Practices
+- ✅ Configure storage backend early in app lifecycle
+- ✅ Use async/await for all authentication operations
+- ✅ Handle errors appropriately for your app's UX
+- ✅ Update user data frequently for better targeting
+- ✅ Use convenience properties for UI state management
+- ✅ Implement custom storage backends for your specific needs
+- ✅ Test with different storage backends during development
+- ✅ Monitor user analytics for app improvement insights
+
+### Flexible Usage Patterns
+The User Manager is designed to work with any app architecture:
+
+#### Simple Local App
+```swift
+// Just use default UserDefaults storage
+// Only track onboarding completion
+UserManager.shared.completeOnboarding()
+```
+
+#### Firebase App
+```swift
+// Implement Firebase storage backend
+// Use full user profiles and data sync
+UserManager.shared.setStorageBackend(FirebaseStorage())
+```
+
+#### Enterprise App
+```swift
+// Implement custom API storage backend
+// Full integration with existing services
+UserManager.shared.setStorageBackend(APIStorage())
+```
+
+This User Manager provides a complete foundation for user state management that scales from simple local apps to complex enterprise applications with full backend integration.
+
+---
+
+## 🏗️ Utilities Architecture
+
+### File Structure
+```
+Utils/
+├── apiService.swift           - HTTP client and API handling
+├── notificationManager.swift  - Notification and engagement system
+├── superwallService.swift     - Paywall and monetization system
+└── userManager.swift          - User state management system
+```
+
+### Design Principles
+- **Singleton pattern** for shared utilities
+- **Protocol-oriented** design for testability
+- **Async/await** for modern Swift patterns
+- **Comprehensive error handling** with specific error types
+- **Security-first** approach for all utilities
+- **Novice-friendly** with extensive documentation and examples
+- **Type-safe** operations with Swift generics and Codable
+
+### Best Practices
+1. Always use the shared instance: `APIService.shared`, `NotificationManager.shared`, `SuperwallService.shared`, `UserManager.shared`
+2. Configure utilities once during app startup
+3. Use proper error handling with specific error types
+4. Follow the service layer pattern for API organization
+5. Enable debug logging during development only
+6. Test network calls with proper loading states
+7. Handle authentication errors gracefully
+8. Use type-safe Codable models for all API responses
+9. Request notification permissions during onboarding
+10. Start engagement campaigns after successful permission grant
+11. Monitor notification performance and user engagement
+12. Configure paywall placements strategically for maximum revenue
+13. Set user attributes early and update frequently for better targeting
+14. Use flexible storage backends appropriate for your app's needs
+15. Implement proper user state management with reactive UI updates
+
+This utilities system provides a robust foundation for building secure, engaging, and user-centric iOS applications with modern Swift patterns, proven user retention strategies, and comprehensive state management.

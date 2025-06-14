@@ -1,0 +1,345 @@
+---
+description: Guidelines for creating reusable UI components that determine when to extract components vs. keep code inline, with a focus on theme system integration and comprehensive documentation. Provides templates and organization structure (Global/, Flow-specific/, Shared/) to ensure consistent, accessible, and maintainable component development.
+globs: 
+alwaysApply: false
+---
+# Swift Boilerplate Component Rules
+
+## 🏗️ Component Architecture Guidelines
+
+### **When to Create Components**
+
+#### ✅ CREATE a separate component for:
+- **Reusable UI elements** used in 2+ places
+- **Complex views** with 50+ lines of code
+- **Self-contained functionality** (forms, cards, lists)
+- **Stateful UI elements** with their own logic
+- **Custom controls** and interactive elements
+- **Data-driven components** (user profiles, product cards)
+
+#### ❌ KEEP inline when:
+- **Simple, one-off elements** used only once
+- **Basic containers** with minimal logic
+- **Layout helpers** under 20 lines
+- **Trivial UI elements** (basic text, spacers)
+
+### **Component Organization Structure**
+
+```
+Components/
+├── Global/           # App-wide reusable components
+├── [FlowName]/      # Flow-specific components (Onboarding/, Main/, etc.)
+└── Shared/          # Cross-flow shared components
+```
+
+#### **Folder Guidelines:**
+- **Global/**: Navigation bars, alerts, loading indicators, form elements
+- **Flow-specific/**: Components used only within that flow
+- **Shared/**: Cross-flow components (e.g., used in both Main and Settings)
+
+---
+
+## 📝 Component File Template
+
+### **Standard Component Structure**
+
+```swift
+//
+//  [ComponentName].swift
+//  Swift-Boilerplate
+//
+//  Created by [Author] on [Date].
+//
+
+/*
+ [COMPONENT NAME] - [Brief Description]
+ 
+ [Detailed description of what this component does]
+ 
+ **Usage:**
+ [ComponentName](
+     parameter1: value1,
+     parameter2: value2
+ )
+ 
+ **Features:**
+ - Feature 1
+ - Feature 2
+ - Feature 3
+ 
+ **Customization:**
+ - How to customize appearance
+ - How to modify behavior
+ - Available parameters
+ */
+
+import SwiftUI
+
+/// [Brief component description]
+/// [Additional details about purpose and usage]
+struct [ComponentName]: View {
+    
+    // MARK: - Properties
+    
+    /// [Property description]
+    let requiredProperty: PropertyType
+    
+    /// [Property description with default]
+    let optionalProperty: PropertyType
+    
+    /// [State property description]
+    @State private var internalState: StateType = defaultValue
+    
+    /// [Binding property description]
+    @Binding var bindingProperty: BindingType
+    
+    /// [Callback property description]
+    let onAction: (() -> Void)?
+    
+    // MARK: - Initializer
+    
+    /// Creates a new [ComponentName]
+    /// - Parameters:
+    ///   - requiredProperty: [Description]
+    ///   - optionalProperty: [Description] (default: [default value])
+    ///   - bindingProperty: [Description]
+    ///   - onAction: [Description] (optional)
+    init(
+        requiredProperty: PropertyType,
+        optionalProperty: PropertyType = defaultValue,
+        bindingProperty: Binding<BindingType>,
+        onAction: (() -> Void)? = nil
+    ) {
+        self.requiredProperty = requiredProperty
+        self.optionalProperty = optionalProperty
+        self._bindingProperty = bindingProperty
+        self.onAction = onAction
+    }
+    
+    // MARK: - Body
+    
+    var body: some View {
+        // Component implementation
+        VStack {
+            // Use theme system consistently
+            Text("Component Content")
+                .font(.bodyMedium)
+                .foregroundColor(.textPrimary)
+        }
+        .background(.backgroundPrimary)
+    }
+    
+    // MARK: - Private Methods
+    
+    /// [Method description]
+    private func helperMethod() {
+        // Implementation
+    }
+}
+
+// MARK: - Convenience Initializers
+
+extension [ComponentName] {
+    
+    /// Convenience initializer for [specific use case]
+    /// - Parameters:
+    ///   - simpleParam: [Description]
+    init(simpleParam: ParamType) {
+        self.init(
+            requiredProperty: derivedValue,
+            bindingProperty: .constant(defaultValue)
+        )
+    }
+}
+
+// MARK: - Preview
+
+#Preview("[ComponentName] Default") {
+    [ComponentName](
+        requiredProperty: sampleValue,
+        bindingProperty: .constant(sampleValue)
+    )
+}
+
+#Preview("[ComponentName] Dark Mode") {
+    [ComponentName](
+        requiredProperty: sampleValue,
+        bindingProperty: .constant(sampleValue)
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("[ComponentName] Variations") {
+    VStack(spacing: 20) {
+        [ComponentName](
+            requiredProperty: variation1,
+            bindingProperty: .constant(value1)
+        )
+        
+        [ComponentName](
+            requiredProperty: variation2,
+            bindingProperty: .constant(value2)
+        )
+    }
+    .padding()
+}
+```
+
+---
+
+## 🎨 Component Design Principles
+
+### **1. Theme System Integration**
+```swift
+// ✅ ALWAYS use theme system
+Text("Title")
+    .font(.titleLarge)           // Use theme fonts
+    .foregroundColor(.textPrimary) // Use theme colors
+
+Button("Action") { }
+    .buttonStyle(.primary)       // Use theme button styles
+```
+
+### **2. Accessibility First**
+```swift
+// ✅ Include accessibility support
+.accessibilityLabel("Clear button")
+.accessibilityHint("Clears the current text")
+.accessibilityRole(.button)
+```
+
+### **3. State Management**
+```swift
+// ✅ Prefer @State for internal state
+@State private var isExpanded = false
+
+// ✅ Use @Binding for parent communication
+@Binding var selectedItem: Item?
+
+// ✅ Use callbacks for actions
+let onItemSelected: (Item) -> Void
+```
+
+### **4. Customization Support**
+```swift
+// ✅ Provide customization options
+struct CustomCard: View {
+    let title: String
+    let subtitle: String?
+    let backgroundColor: Color
+    let cornerRadius: CGFloat
+    
+    init(
+        title: String,
+        subtitle: String? = nil,
+        backgroundColor: Color = .backgroundSecondary,
+        cornerRadius: CGFloat = 12
+    ) {
+        // Initialize properties
+    }
+}
+```
+
+---
+
+## 🔧 Component Categories & Examples
+
+### **1. Form Components**
+- `TextFieldComponent` - Themed text input with validation
+- `ToggleComponent` - Themed switch with label
+- `PickerComponent` - Styled picker with options
+- `ButtonComponent` - Already implemented in theme system
+
+### **2. Data Display Components**
+- `ProfileCard` - User profile display
+- `StatCard` - Metric display with icon
+- `ListRow` - Standardized list item
+- `EmptyState` - No data placeholder
+
+### **3. Navigation Components**
+- `NavigationHeader` - Custom nav bar
+- `BackButton` - Themed back navigation
+- `TabBarComponent` - Custom tab styling
+- `BreadcrumbComponent` - Navigation breadcrumbs
+
+### **4. Feedback Components**
+- `LoadingIndicator` - Activity spinner
+- `ErrorView` - Error state display
+- `SuccessAlert` - Success feedback
+- `ProgressIndicator` - Progress tracking
+
+### **5. Layout Components**
+- `CardContainer` - Styled card wrapper
+- `SectionHeader` - Section title with divider
+- `Spacer` - Consistent spacing helper
+- `DividerLine` - Themed divider
+
+---
+
+## 📱 Component Responsiveness
+
+### **Adaptive Design**
+```swift
+// ✅ Support different screen sizes
+var body: some View {
+    HStack {
+        if horizontalSizeClass == .compact {
+            compactLayout
+        } else {
+            regularLayout
+        }
+    }
+}
+
+@Environment(\.horizontalSizeClass) var horizontalSizeClass
+```
+
+### **Dynamic Type Support**
+```swift
+// ✅ Support accessibility text sizes
+Text("Title")
+    .font(.titleLarge)
+    .lineLimit(nil)  // Allow text to wrap
+    .minimumScaleFactor(0.8)  // Minimum scale for readability
+```
+
+---
+
+## 🧪 Testing & Validation
+
+### **Preview Requirements**
+- **Default state** preview
+- **Dark mode** preview  
+- **Edge cases** preview (empty data, long text, etc.)
+- **Size variations** preview
+- **Error states** preview (when applicable)
+
+### **Component Validation Checklist**
+- [ ] Uses theme system consistently
+- [ ] Includes comprehensive documentation
+- [ ] Has proper accessibility support
+- [ ] Supports both light and dark modes
+- [ ] Handles edge cases gracefully
+- [ ] Has multiple preview variations
+- [ ] Follows naming conventions
+- [ ] Uses proper MARK comments
+- [ ] Has appropriate default values
+- [ ] Implements proper state management
+
+---
+
+## 🎯 Best Practices Summary
+
+1. **Document Everything** - Components should be self-explanatory
+2. **Theme Integration** - Always use the theme system
+3. **Accessibility First** - Include proper accessibility support
+4. **Preview Variations** - Test different states and modes
+5. **Consistent Naming** - Follow Swift and SwiftUI conventions
+6. **Reusability** - Design for multiple use cases
+7. **State Management** - Use appropriate state patterns
+8. **Error Handling** - Handle edge cases gracefully
+9. **Performance** - Avoid unnecessary re-renders
+10. **Maintainability** - Write clean, readable code
+
+> **Remember**: Components should make development faster and more consistent, not more complex. When in doubt, keep it simple and well-documented!
+

@@ -1,0 +1,445 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Swift Boilerplate Rules
+
+## 🎯 **Master Guidelines for Consistent iOS Development**
+
+This document serves as the comprehensive rulebook for the Swift Boilerplate project. These rules ensure consistency, maintainability, and quality across all aspects of app development while remaining flexible for different implementations.
+
+---
+
+## 🏗️ **Architecture Overview**
+
+### **Project Structure**
+```
+Swift-Boilerplate/
+├── Views/              # Flow-based view organization
+│   ├── App/           # App-level views (splash, errors)
+│   ├── Onboarding/    # User onboarding flow
+│   ├── Main/          # Core app functionality
+│   └── [CustomFlow]/ # Additional user flows
+├── Components/        # Reusable UI components
+│   ├── Global/       # App-wide components
+│   ├── Shared/       # Cross-flow components
+│   └── [FlowName]/   # Flow-specific components
+├── Utils/            # Core services and utilities
+├── Theme/            # Design system implementation
+└── Assets.xcassets/  # Colors, images, data
+```
+
+### **Core Principles**
+1. **Theme-First Design** - All UI must use the theme system
+2. **Flow-Based Organization** - Group related screens together
+3. **Component Reusability** - Extract reusable elements
+4. **Service Integration** - Leverage built-in utilities
+5. **Accessibility by Default** - Support all users
+6. **Documentation-Driven** - Code should be self-explanatory
+
+---
+
+## 🎨 **Design System Enforcement**
+
+### **✅ ALWAYS Use Theme System**
+```swift
+// ✅ CORRECT - Use theme colors
+Text("Title").foregroundColor(.textPrimary)
+Button("Action") { }.buttonStyle(.primary)
+
+// ❌ INCORRECT - Hard-coded values
+Text("Title").foregroundColor(.black)
+Button("Action") { }.background(.blue)
+```
+
+### **Required Theme Usage**
+- **Colors**: Use `Color.textPrimary`, `Color.backgroundSecondary`, etc.
+- **Fonts**: Use `Font.titleLarge`, `Font.bodyMedium`, etc.
+- **Buttons**: Use `.primary`, `.secondary`, `.destructive` styles
+- **Spacing**: Use consistent padding (16, 20, 24, 40pt)
+- **Corner Radius**: Use theme standards (6, 8, 12pt)
+
+### **Design Consistency Checklist**
+- [ ] All text uses theme fonts
+- [ ] All colors come from theme system
+- [ ] Button styles are consistent across flows
+- [ ] Spacing follows standard increments
+- [ ] Dark mode is properly supported
+- [ ] Accessibility labels are included
+
+---
+
+## 📱 **View Development Standards**
+
+### **View Organization Rules**
+1. **Create new flow folder** for 3+ related screens
+2. **Keep single views** in existing appropriate folders
+3. **Follow consistent structure** per view template
+4. **Use proper MARK comments** for organization
+5. **Include comprehensive previews** for all states
+
+### **Required View Patterns**
+```swift
+// ✅ Standard view structure
+VStack(spacing: 20) {
+    headerSection     // Title, description
+    mainContent      // Core functionality  
+    Spacer()         // Push footer down
+    footerSection    // Actions, navigation
+}
+.padding(.horizontal, 24)
+.frame(maxWidth: .infinity, maxHeight: .infinity)
+.background(Color.backgroundPrimary)
+```
+
+### **Navigation Consistency**
+- **Use callbacks** for parent-child communication
+- **Consistent titles** and navigation patterns
+- **Back button behavior** should be predictable
+- **Transition animations** should be smooth
+
+### **State Management Requirements**
+- `@State` for local UI state
+- `@StateObject` for managers and services
+- `@Environment` for system values
+- `@Binding` for parent-child data flow
+
+---
+
+## 🧩 **Component Development Standards**
+
+### **Component Decision Matrix**
+| Create Component | Keep Inline |
+|------------------|-------------|
+| Used 2+ places | One-time use |
+| 50+ lines of code | Under 20 lines |
+| Complex logic | Simple containers |
+| Stateful behavior | Basic text/spacers |
+
+### **Required Component Structure**
+1. **Comprehensive documentation** with usage examples
+2. **Multiple initializers** for flexibility
+3. **Theme system integration** throughout
+4. **Accessibility support** built-in
+5. **Multiple preview variations** for testing
+
+### **Component Quality Gates**
+- [ ] Has extensive header documentation
+- [ ] Uses theme system exclusively
+- [ ] Includes accessibility support
+- [ ] Has default, dark mode, and edge case previews
+- [ ] Follows naming conventions
+- [ ] Has appropriate default values
+
+---
+
+## 🔧 **Utility Integration Standards**
+
+### **Service Usage Patterns**
+```swift
+// ✅ Proper service integration
+@StateObject private var userManager = UserManager.shared
+@StateObject private var apiService = APIService.shared
+
+// Configure once in app startup
+APIService.shared.configure(baseURL: "https://api.yourapp.com")
+SuperwallService.shared.configure(apiKey: "your-key")
+```
+
+### **Required Integrations**
+1. **UserManager** - All views should observe user state
+2. **APIService** - Use for all network calls
+3. **NotificationManager** - Handle engagement campaigns
+4. **SuperwallService** - Implement strategic paywalls
+
+### **Error Handling Standards**
+- Always handle specific error types
+- Provide user-friendly error messages
+- Log errors appropriately for debugging
+- Implement retry mechanisms where appropriate
+
+---
+
+## 📐 **Code Quality Standards**
+
+### **Documentation Requirements**
+```swift
+/*
+ VIEW/COMPONENT NAME - Brief Description
+ 
+ Detailed description including:
+ - Purpose and functionality
+ - Navigation behavior
+ - State management
+ - Integration points
+ - Novice developer guidance
+ */
+```
+
+### **Code Organization**
+```swift
+// MARK: - Properties
+// MARK: - Initializer  
+// MARK: - Body
+// MARK: - Content Views
+// MARK: - Methods
+// MARK: - Preview
+```
+
+### **Naming Conventions**
+- **Views**: `PascalCase` ending with `View`
+- **Components**: `PascalCase` descriptive names
+- **Properties**: `camelCase` with descriptive names
+- **Methods**: `camelCase` starting with verbs
+- **Constants**: `camelCase` or `UPPER_CASE` for globals
+
+### **Performance Guidelines**
+- Avoid expensive operations in view body
+- Use `@ViewBuilder` for complex conditional views
+- Minimize state updates and re-renders
+- Use lazy loading for large datasets
+
+---
+
+## ♿ **Accessibility Standards**
+
+### **Required Accessibility Support**
+```swift
+// ✅ Accessibility implementation
+Text("Welcome")
+    .accessibilityLabel("Welcome message")
+    .accessibilityHint("App introduction")
+
+Button("Continue") { }
+    .accessibilityRole(.button)
+    .accessibilityLabel("Continue to next step")
+```
+
+### **Accessibility Checklist**
+- [ ] All interactive elements have labels
+- [ ] Meaningful accessibility hints provided
+- [ ] Support for Dynamic Type (text scaling)
+- [ ] Proper contrast ratios (4.5:1 minimum)
+- [ ] Voice Control compatibility
+- [ ] Screen reader navigation support
+
+---
+
+## 🧪 **Testing & Preview Standards**
+
+### **Required Preview Coverage**
+```swift
+// ✅ Comprehensive preview set
+#Preview("Default State") { ViewName() }
+#Preview("Dark Mode") { ViewName().preferredColorScheme(.dark) }
+#Preview("Loading State") { ViewName(/* loading config */) }
+#Preview("Error State") { ViewName(/* error config */) }
+#Preview("Edge Cases") { ViewName(/* edge case config */) }
+```
+
+### **Testing Strategy**
+- **Unit tests** for utility functions
+- **Preview tests** for UI components
+- **Integration tests** for service interactions
+- **Accessibility tests** for compliance
+- **Performance tests** for optimization
+
+---
+
+## 🎛️ **Development Workflow**
+
+### **Adding New Features**
+1. **Assess scope** - New flow or existing enhancement?
+2. **Check patterns** - Can existing components be reused?
+3. **Follow templates** - Use view/component templates
+4. **Integrate services** - Leverage existing utilities
+5. **Test thoroughly** - Multiple states and scenarios
+6. **Document completely** - Help future developers
+
+### **Design System Updates**
+1. **Evaluate impact** - How many files affected?
+2. **Update theme files** first
+3. **Test across flows** to ensure consistency
+4. **Update documentation** accordingly
+5. **Consider backwards compatibility**
+
+### **Code Review Checklist**
+- [ ] Follows architectural patterns
+- [ ] Uses theme system consistently
+- [ ] Includes proper documentation
+- [ ] Has comprehensive previews
+- [ ] Supports accessibility
+- [ ] Handles errors gracefully
+- [ ] Integrates services properly
+- [ ] Maintains performance standards
+
+---
+
+## 🔄 **Flow-Specific Guidelines**
+
+### **Onboarding Flow Standards**
+- **Consistent button positioning** at bottom
+- **Skip functionality** as text below primary button
+- **Full-width primary actions**
+- **Minimal progress indicators** (avoid clutter)
+- **Clear value propositions** for each step
+
+### **Main App Flow Standards**
+- **Tab-based navigation** for primary functions
+- **NavigationView** for hierarchical content
+- **Consistent toolbar** usage across views
+- **Loading states** for all async operations
+- **Empty states** for no-data scenarios
+
+### **Settings Flow Standards**
+- **List-based layouts** for options
+- **Section grouping** for related settings
+- **Toggle consistency** across all switches
+- **Clear descriptions** for all options
+- **Proper logout flow** with confirmation
+
+---
+
+## 🚀 **Performance & Optimization**
+
+### **SwiftUI Best Practices**
+- Use `@ViewBuilder` for complex conditions
+- Minimize `@State` property updates
+- Leverage `@ObservedObject` appropriately
+- Avoid force unwrapping in views
+- Use `task` modifier for async operations
+
+### **Memory Management**
+- Avoid retain cycles in closures
+- Use weak references where appropriate
+- Clean up resources in `onDisappear`
+- Monitor memory usage during development
+
+### **Network Optimization**
+- Implement proper request caching
+- Use connection pooling in APIService
+- Handle offline scenarios gracefully
+- Implement request deduplication
+
+---
+
+## 🎨 **Visual Design Standards**
+
+### **Layout Principles**
+- **8pt grid system** for spacing consistency
+- **24pt horizontal margins** for main content
+- **20pt vertical spacing** between sections
+- **40pt bottom padding** for button areas
+
+### **Animation Guidelines**
+- **0.3 seconds** for navigation transitions
+- **0.1 seconds** for button press feedback
+- **easeInOut** for smooth, natural motion
+- **Scale effects** for interactive feedback
+
+### **Color Usage Patterns**
+- **Primary colors** for main actions and CTAs
+- **Secondary colors** for supporting elements
+- **Error colors** only for errors and warnings
+- **Success colors** for confirmations
+- **Neutral colors** for text and backgrounds
+
+---
+
+## 📚 **Documentation Standards**
+
+### **Code Documentation**
+- **Header comments** explaining purpose and usage
+- **Parameter documentation** for complex methods
+- **Usage examples** in component documentation
+- **Integration guides** for service usage
+
+### **README Requirements**
+- **Setup instructions** for new developers
+- **Architecture overview** and rationale
+- **Contribution guidelines** and standards
+- **Troubleshooting guide** for common issues
+
+---
+
+## 🔒 **Security & Privacy**
+
+### **Data Handling**
+- **HTTPS-only** for all network requests
+- **Secure storage** for sensitive data
+- **Proper authentication** token management
+- **Data encryption** where appropriate
+
+### **Privacy Compliance**
+- **Permission requests** with clear explanations
+- **Data usage transparency** in UI
+- **User control** over data sharing
+- **Secure data deletion** on logout
+
+---
+
+## 🎯 **Quality Assurance**
+
+### **Definition of Done**
+A feature is complete when it:
+- [ ] Follows all architectural patterns
+- [ ] Uses theme system consistently
+- [ ] Includes comprehensive documentation
+- [ ] Has multiple preview variations
+- [ ] Supports accessibility requirements
+- [ ] Handles all error states
+- [ ] Integrates with services properly
+- [ ] Passes performance benchmarks
+- [ ] Works in both light and dark modes
+- [ ] Supports different screen sizes
+
+### **Code Quality Metrics**
+- **View complexity**: Keep under 100 lines when possible
+- **Component reusability**: Extract when used 2+ times
+- **Documentation coverage**: All public APIs documented
+- **Test coverage**: Critical paths covered
+- **Performance**: Smooth 60fps interactions
+
+---
+
+## 🌟 **Best Practices Summary**
+
+1. **Design System First** - Always use theme components
+2. **Flow-Based Organization** - Group related functionality
+3. **Component Thinking** - Build reusable, documented pieces
+4. **Service Integration** - Leverage built-in utilities effectively
+5. **Accessibility by Default** - Support all users from day one
+6. **Performance Conscious** - Build smooth, responsive experiences
+7. **Documentation Driven** - Help future developers (including yourself)
+8. **Error Handling** - Gracefully handle all edge cases
+9. **Testing Comprehensive** - Cover different states and scenarios
+10. **Quality Focused** - Maintain high standards throughout
+
+---
+
+## 📖 **Reference Documentation**
+
+- **@component-rules.mdc** - Detailed component development guidelines
+- **@view-rules.mdc** - Comprehensive view architecture standards
+- **@util-rules.mdc** - Complete utility integration documentation
+- **Theme Documentation** - Available in workspace rules
+- **Service Integration** - Individual service documentation in Utils/
+
+---
+
+> **Remember**: This boilerplate provides a solid foundation while remaining flexible for different app implementations. These rules ensure consistency and quality while allowing for customization based on specific app requirements. When in doubt, prioritize user experience, code clarity, and maintainability!
+
+## 🚀 **Getting Started**
+
+For new developers joining a project using this boilerplate:
+
+1. **Read this document** to understand the overall architecture
+2. **Study the theme system** to understand design consistency
+3. **Review existing flows** to see patterns in action
+4. **Check component examples** to understand reusability
+5. **Explore utility integrations** to leverage built-in services
+6. **Follow templates** when creating new features
+7. **Ask questions** and contribute to improving these rules!
+
+This boilerplate is designed to make iOS development faster, more consistent, and more enjoyable for developers of all skill levels. 🎉

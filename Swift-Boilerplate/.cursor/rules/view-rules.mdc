@@ -1,0 +1,606 @@
+---
+description: Establishes flow-based view architecture with standardized templates for different screen types (onboarding, main app, settings) including proper state management and navigation patterns. Ensures consistent layout structure, theme integration, and comprehensive preview coverage for all views across the app.
+globs: 
+alwaysApply: false
+---
+# Swift Boilerplate View Rules
+
+## 🏛️ View Architecture Guidelines
+
+### **Current View Structure**
+```
+Views/
+├── App/              # App-level views (splash, error states)
+├── Onboarding/       # User onboarding flow
+├── Main/            # Main app functionality 
+├── Settings/        # Settings and preferences (if separate from Main)
+└── [NewFlow]/       # Additional flows as needed
+```
+
+### **When to Create New Flow Folders**
+#### ✅ CREATE a new flow folder for:
+- **Distinct user journeys** (Authentication, Onboarding, Checkout, etc.)
+- **Feature groups** with 3+ related views
+- **Self-contained workflows** with clear entry/exit points
+- **Different user types** (Admin, Customer, Guest flows)
+
+#### ❌ KEEP in existing folders when:
+- **Single views** without related screens
+- **Minor variations** of existing flows
+- **Settings/preferences** (usually part of Main)
+
+---
+
+## 📝 View File Template
+
+### **Standard View Structure**
+
+```swift
+//
+//  [ViewName].swift
+//  Swift-Boilerplate
+//
+//  Created by [Author] on [Date].
+//
+
+/*
+ [VIEW NAME] - [Brief Description]
+ 
+ [Detailed description of what this view does and its role in the app]
+ 
+ **Purpose:**
+ - Primary purpose of this view
+ - Key functionality it provides
+ - User goals it helps achieve
+ 
+ **Navigation:**
+ - How users reach this view
+ - Where users can go from here
+ - Back navigation behavior
+ 
+ **Features:**
+ - Key feature 1
+ - Key feature 2
+ - Key feature 3
+ 
+ **State Management:**
+ - What state this view manages
+ - External dependencies
+ - Data sources
+ 
+ **For Novice Developers:**
+ - Simple explanation of complex concepts
+ - Common patterns used
+ - Areas for customization
+ */
+
+import SwiftUI
+
+/// [Brief view description]
+/// [Additional context about the view's role]
+struct [ViewName]: View {
+    
+    // MARK: - Properties
+    
+    /// [State object description]
+    @StateObject private var manager = ManagerClass.shared
+    
+    /// [State property description]
+    @State private var localState: StateType = defaultValue
+    
+    /// [Environment property description]
+    @Environment(\.dismiss) private var dismiss
+    
+    /// [Navigation callback description]
+    let onNavigate: (Destination) -> Void
+    
+    /// [Completion callback description]
+    let onComplete: (() -> Void)?
+    
+    // MARK: - Initializer
+    
+    /// Creates a new [ViewName]
+    /// - Parameters:
+    ///   - onNavigate: Callback for navigation events
+    ///   - onComplete: Optional completion callback
+    init(
+        onNavigate: @escaping (Destination) -> Void,
+        onComplete: (() -> Void)? = nil
+    ) {
+        self.onNavigate = onNavigate
+        self.onComplete = onComplete
+    }
+    
+    // MARK: - Body
+    
+    var body: some View {
+        NavigationView {
+            content
+                .navigationTitle("View Title")
+                .navigationBarTitleDisplayMode(.large)
+                .navigationBarBackButtonHidden(false)
+                .toolbar {
+                    toolbarContent
+                }
+        }
+        .onAppear {
+            handleViewAppear()
+        }
+        .onDisappear {
+            handleViewDisappear()
+        }
+    }
+    
+    // MARK: - Content Views
+    
+    /// Main content of the view
+    @ViewBuilder
+    private var content: some View {
+        VStack(spacing: 20) {
+            headerSection
+            
+            mainContent
+            
+            Spacer()
+            
+            footerSection
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.backgroundPrimary)
+    }
+    
+    /// Header section with title and description
+    @ViewBuilder
+    private var headerSection: some View {
+        VStack(spacing: 12) {
+            Text("Main Title")
+                .font(.displayMedium)
+                .foregroundColor(.textPrimary)
+                .multilineTextAlignment(.center)
+            
+            Text("Subtitle or description text")
+                .font(.bodyMedium)
+                .foregroundColor(.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.top, 20)
+    }
+    
+    /// Main content area
+    @ViewBuilder
+    private var mainContent: some View {
+        // Main view content goes here
+        VStack {
+            // Implementation
+        }
+    }
+    
+    /// Footer with actions
+    @ViewBuilder
+    private var footerSection: some View {
+        VStack(spacing: 16) {
+            Button("Primary Action") {
+                handlePrimaryAction()
+            }
+            .buttonStyle(.primary)
+            
+            Button("Secondary Action") {
+                handleSecondaryAction()
+            }
+            .buttonStyle(.secondary)
+        }
+        .padding(.bottom, 40)
+    }
+    
+    /// Toolbar content
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button("Action") {
+                handleToolbarAction()
+            }
+        }
+    }
+    
+    // MARK: - Methods
+    
+    /// Handles view appearance
+    private func handleViewAppear() {
+        // Setup, analytics, etc.
+    }
+    
+    /// Handles view disappearance
+    private func handleViewDisappear() {
+        // Cleanup, save state, etc.
+    }
+    
+    /// Handles primary action
+    private func handlePrimaryAction() {
+        // Implementation
+        onNavigate(.nextScreen)
+    }
+    
+    /// Handles secondary action
+    private func handleSecondaryAction() {
+        // Implementation
+        dismiss()
+    }
+    
+    /// Handles toolbar action
+    private func handleToolbarAction() {
+        // Implementation
+    }
+}
+
+// MARK: - Navigation Destinations
+
+extension [ViewName] {
+    
+    /// Available navigation destinations from this view
+    enum Destination {
+        case nextScreen
+        case previousScreen
+        case settings
+        case help
+    }
+}
+
+// MARK: - Preview
+
+#Preview("[ViewName] Default") {
+    [ViewName] { destination in
+        print("Navigate to: \(destination)")
+    }
+}
+
+#Preview("[ViewName] Dark Mode") {
+    [ViewName] { destination in
+        print("Navigate to: \(destination)")
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("[ViewName] Loading State") {
+    [ViewName] { destination in
+        print("Navigate to: \(destination)")
+    }
+    // Add any specific state setup for this preview
+}
+```
+
+---
+
+## 🎨 View Design Principles
+
+### **1. Consistent Layout Pattern**
+```swift
+// ✅ Standard layout structure
+VStack(spacing: 20) {
+    headerSection     // Title, description
+    mainContent      // Core functionality
+    Spacer()         // Push footer down
+    footerSection    // Actions, navigation
+}
+.padding(.horizontal, 24)
+.frame(maxWidth: .infinity, maxHeight: .infinity)
+.background(Color.backgroundPrimary)
+```
+
+### **2. Theme System Integration**
+```swift
+// ✅ Always use theme system
+Text("Title")
+    .font(.displayLarge)           // Theme fonts
+    .foregroundColor(.textPrimary) // Theme colors
+
+Button("Action") { }
+    .buttonStyle(.primary)         // Theme button styles
+```
+
+### **3. Responsive Design**
+```swift
+// ✅ Adapt to different screen sizes
+@Environment(\.horizontalSizeClass) var horizontalSizeClass
+
+var body: some View {
+    if horizontalSizeClass == .compact {
+        compactLayout
+    } else {
+        regularLayout
+    }
+}
+```
+
+### **4. Navigation Consistency**
+```swift
+// ✅ Consistent navigation patterns
+.navigationTitle("Screen Title")
+.navigationBarTitleDisplayMode(.large)
+.navigationBarBackButtonHidden(false)
+
+// ✅ Use callbacks for navigation
+let onNavigate: (Destination) -> Void
+```
+
+---
+
+## 🔄 View Flow Patterns
+
+### **1. Onboarding Flow Pattern**
+```swift
+// Each onboarding view should:
+// - Have consistent button positioning
+// - Support skip functionality
+// - Follow the same visual hierarchy
+// - Handle navigation callbacks
+
+struct OnboardingView: View {
+    let onContinue: () -> Void
+    let onSkip: (() -> Void)?
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            
+            // Content area
+            contentArea
+            
+            Spacer()
+            
+            // Consistent button area
+            VStack(spacing: 16) {
+                Button("Continue") {
+                    onContinue()
+                }
+                .buttonStyle(.primary)
+                
+                if let onSkip = onSkip {
+                    Button("Skip") {
+                        onSkip()
+                    }
+                    .foregroundColor(.textSecondary)
+                    .font(.bodyMedium)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 40)
+        }
+    }
+}
+```
+
+### **2. Main App Flow Pattern**
+```swift
+// Main app views should:
+// - Use NavigationView/NavigationStack
+// - Have proper toolbar integration
+// - Support tab navigation if applicable
+// - Handle state management properly
+
+struct MainAppView: View {
+    @StateObject private var userManager = UserManager.shared
+    
+    var body: some View {
+        NavigationView {
+            content
+                .navigationTitle("Screen Title")
+                .toolbar {
+                    // Toolbar items
+                }
+        }
+        .onAppear {
+            // Load data, setup
+        }
+    }
+}
+```
+
+### **3. Settings Flow Pattern**
+```swift
+// Settings views should:
+// - Use List or Form for options
+// - Group related settings
+// - Provide clear labels and descriptions
+// - Handle toggle states properly
+
+struct SettingsView: View {
+    @StateObject private var userManager = UserManager.shared
+    
+    var body: some View {
+        NavigationView {
+            List {
+                settingsSection("General") {
+                    // Settings rows
+                }
+                
+                settingsSection("Privacy") {
+                    // Privacy settings
+                }
+            }
+            .navigationTitle("Settings")
+        }
+    }
+}
+```
+
+---
+
+## 📊 State Management Patterns
+
+### **1. View-Level State**
+```swift
+// ✅ Use @State for local UI state
+@State private var isLoading = false
+@State private var selectedTab = 0
+@State private var showingAlert = false
+```
+
+### **2. App-Level State**
+```swift
+// ✅ Use @StateObject for managers
+@StateObject private var userManager = UserManager.shared
+@StateObject private var settingsManager = SettingsManager()
+```
+
+### **3. Environment Values**
+```swift
+// ✅ Use @Environment for system values
+@Environment(\.dismiss) private var dismiss
+@Environment(\.colorScheme) private var colorScheme
+@Environment(\.horizontalSizeClass) var horizontalSizeClass
+```
+
+### **4. Parent-Child Communication**
+```swift
+// ✅ Use callbacks for navigation
+let onComplete: () -> Void
+let onNavigate: (Destination) -> Void
+
+// ✅ Use @Binding for two-way data flow
+@Binding var selectedItem: Item?
+```
+
+---
+
+## 🎯 View Categories & Examples
+
+### **1. App-Level Views**
+- `SplashView` - App launch screen
+- `ErrorView` - Global error handling
+- `MaintenanceView` - App maintenance mode
+- `UpdateRequiredView` - Force update screen
+
+### **2. Onboarding Views**
+- `WelcomeView` - First impression
+- `PermissionView` - System permissions
+- `PaywallView` - Subscription offering
+- `OnboardingCompleteView` - Success screen
+
+### **3. Main App Views**
+- `HomeView` - Primary dashboard
+- `ContentDetailView` - Detail screens
+- `SearchView` - Search functionality
+- `ProfileView` - User profile
+
+### **4. Settings Views**
+- `SettingsView` - Main settings hub
+- `AccountView` - Account management
+- `PrivacyView` - Privacy settings
+- `AboutView` - App information
+
+### **5. Support Views**
+- `LoadingView` - Loading states
+- `EmptyStateView` - No data states
+- `ErrorStateView` - Error recovery
+- `HelpView` - User assistance
+
+---
+
+## 🧪 Preview Requirements
+
+### **Standard Preview Set**
+```swift
+// ✅ Always include these previews
+#Preview("Default State") {
+    ViewName()
+}
+
+#Preview("Dark Mode") {
+    ViewName()
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Loading State") {
+    ViewName()
+    // Configure for loading state
+}
+
+#Preview("Error State") {
+    ViewName()
+    // Configure for error state
+}
+
+#Preview("Empty State") {
+    ViewName()
+    // Configure for empty state
+}
+```
+
+### **Flow-Specific Previews**
+```swift
+// ✅ Include flow-specific variations
+#Preview("Onboarding - Step 1") {
+    OnboardingView(step: 1)
+}
+
+#Preview("Settings - Premium User") {
+    SettingsView()
+        .environmentObject(MockUserManager.premium)
+}
+```
+
+---
+
+## 📱 Accessibility Guidelines
+
+### **1. Navigation Accessibility**
+```swift
+// ✅ Proper navigation support
+.navigationTitle("Screen Title")
+.accessibilityLabel("Main content area")
+.accessibilityHint("Swipe to navigate between sections")
+```
+
+### **2. Dynamic Type Support**
+```swift
+// ✅ Support accessibility text sizes
+Text("Title")
+    .font(.titleLarge)
+    .lineLimit(nil)
+    .minimumScaleFactor(0.8)
+```
+
+### **3. Voice Control Support**
+```swift
+// ✅ Add accessibility identifiers
+.accessibilityIdentifier("primaryActionButton")
+.accessibilityRole(.button)
+.accessibilityAddTraits(.isButton)
+```
+
+---
+
+## ✅ View Validation Checklist
+
+- [ ] **File Structure**: Properly organized in appropriate flow folder
+- [ ] **Documentation**: Comprehensive header comments for novice developers
+- [ ] **Theme Integration**: Uses theme system consistently
+- [ ] **Navigation**: Proper navigation setup and callbacks
+- [ ] **State Management**: Appropriate state patterns
+- [ ] **Responsive Design**: Adapts to different screen sizes
+- [ ] **Accessibility**: Proper accessibility support
+- [ ] **Preview Coverage**: Multiple preview variations
+- [ ] **MARK Comments**: Proper code organization
+- [ ] **Error Handling**: Graceful error states
+- [ ] **Performance**: Efficient rendering and state updates
+- [ ] **Consistency**: Follows established patterns
+- [ ] **Clean Code**: Readable and maintainable implementation
+
+---
+
+## 🎯 Best Practices Summary
+
+1. **Follow Flow Organization** - Use appropriate folder structure
+2. **Document Thoroughly** - Help novice developers understand
+3. **Use Theme System** - Maintain visual consistency
+4. **Handle All States** - Loading, error, empty, success
+5. **Support Accessibility** - Make apps usable for everyone
+6. **Test with Previews** - Cover different scenarios
+7. **Manage State Properly** - Use appropriate state patterns
+8. **Keep Views Focused** - Single responsibility principle
+9. **Plan Navigation** - Clear user flow paths
+10. **Optimize Performance** - Efficient rendering and updates
+
+> **Remember**: Views should be intuitive, accessible, and maintainable. When building new flows, consider the user journey and create a logical progression through your screens!
+
